@@ -1,0 +1,27 @@
+/* Deepfake Defender - Additional Styles */
+
+.dfd-highlight {
+    border: 3px solid #ff4444 !important;
+    animation: dfd-pulse 2s infinite;
+}
+
+@keyframes dfd-pulse {
+    0% { border-color: #ff4444; }
+    50% { border-color: #ff8888; }
+    100% { border-color: #ff4444; }
+}
+
+.dfd-suspicious-chat {
+    background: rgba(255, 68, 68, 0.1) !important;
+    border-left: 4px solid #ff4444 !important;
+}
+
+.dfd-tooltip {
+    position: absolute;
+    background: rgba(0,0,0,0.9);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    z-index: 1000000;
+}

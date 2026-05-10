@@ -1,0 +1,146 @@
+# Complete Dataset Configuration for Deepfake Defender Pro
+# Includes FaceForensics++, FakeAVCeleb, and ASVspoof
+
+paths:
+  # FaceForensics++ - Video deepfakes
+  faceforensics_pp: "/home/kali/deepfake-defender-pro/data/datasets/faceforensics_pp/FaceForensics++_C23"
+  
+  # FakeAVCeleb - Audio-Visual deepfakes
+  fakeavceleb: "/home/kali/deepfake-defender-pro/data/datasets/fakeavceleb/FakeAVCeleb_v1.2"
+  
+  # ASVspoof - Audio deepfakes (both LA and PA)
+  asvspoof_la: "/home/kali/deepfake-defender-pro/data/datasets/asvspoof/LA/LA"
+  asvspoof_pa: "/home/kali/deepfake-defender-pro/data/datasets/asvspoof/PA/PA"
+
+datasets:
+  # FaceForensics++ Configuration
+  faceforensics_pp:
+    name: "FaceForensics++"
+    version: "c23"
+    modality: "video"
+    description: "Video deepfake dataset with multiple manipulation methods"
+    manipulations:
+      - "Deepfakes"
+      - "Face2Face"
+      - "FaceSwap"
+      - "NeuralTextures"
+      - "FaceShifter"
+      - "DeepFakeDetection"
+    real_category: "original"
+    fake_categories: ["Deepfakes", "Face2Face", "FaceSwap", "NeuralTextures", "FaceShifter", "DeepFakeDetection"]
+    file_extension: ".mp4"
+    total_videos: 7000
+    
+  # FakeAVCeleb Configuration
+  fakeavceleb:
+    name: "FakeAVCeleb"
+    version: "v1.2"
+    modality: "audio_visual"
+    description: "Multi-modal deepfake dataset with both video and audio manipulation"
+    categories:
+      - name: "RealVideo-RealAudio"
+        label: 0  # Real
+        description: "Authentic video with authentic audio"
+      - name: "RealVideo-FakeAudio"
+        label: 1  # Voice deepfake
+        description: "Authentic video with fake/cloned audio"
+      - name: "FakeVideo-RealAudio"
+        label: 1  # Face deepfake
+        description: "Deepfake video with authentic audio"
+      - name: "FakeVideo-FakeAudio"
+        label: 2  # Full deepfake
+        description: "Deepfake video with fake/cloned audio"
+    file_extension: ".mp4"
+    total_videos: 21560
+    
+  # ASVspoof Configuration (Complete with both LA and PA)
+  asvspoof:
+    name: "ASVspoof 2019"
+    modality: "audio"
+    description: "Complete ASVspoof 2019 with Logical Access (LA) and Physical Access (PA)"
+    versions:
+      la:
+        name: "Logical Access"
+        path: "/home/kali/deepfake-defender-pro/data/datasets/asvspoof/LA/LA"
+        description: "Voice deepfakes (TTS, voice conversion)"
+        splits:
+          train: "ASVspoof2019_LA_train/flac"
+          dev: "ASVspoof2019_LA_dev/flac"
+          eval: "ASVspoof2019_LA_eval/flac"
+        protocols:
+          train: "ASVspoof2019_LA_cm_protocols/ASVspoof2019.LA.cm.train.trn.txt"
+          dev: "ASVspoof2019_LA_cm_protocols/ASVspoof2019.LA.cm.dev.trl.txt"
+          eval: "ASVspoof2019_LA_cm_protocols/ASVspoof2019.LA.cm.eval.trl.txt"
+        file_counts:
+          train: 25380
+          dev: 24986
+          eval: 71933
+          total: 122299
+          
+      pa:
+        name: "Physical Access"
+        path: "/home/kali/deepfake-defender-pro/data/datasets/asvspoof/PA/PA"
+        description: "Replay attacks (recorded and replayed audio)"
+        splits:
+          train: "ASVspoof2019_PA_train/flac"
+          dev: "ASVspoof2019_PA_dev/flac"
+          eval: "ASVspoof2019_PA_eval/flac"
+        protocols:
+          train: "ASVspoof2019_PA_cm_protocols/ASVspoof2019.PA.cm.train.trn.txt"
+          dev: "ASVspoof2019_PA_cm_protocols/ASVspoof2019.PA.cm.dev.trl.txt"
+          eval: "ASVspoof2019_PA_cm_protocols/ASVspoof2019.PA.cm.eval.trl.txt"
+        file_counts:
+          train: 54000
+          dev: 33534
+          eval: 153522
+          total: 241056
+    
+    audio_format: "flac"
+    sample_rate: 16000
+    total_files: 363355
+    total_size_gb: 25
+
+# Training Configuration
+training:
+  seed: 42
+  device: "cuda"  # Change to "cpu" if no GPU
+  num_workers: 4
+  pin_memory: true
+  
+  # Batch sizes
+  batch_sizes:
+    mixed: 8
+    video: 8
+    audio: 32
+    audio_visual: 8
+  
+  # Data sampling
+  sampling:
+    num_frames: 16
+    frame_size: [224, 224]
+    audio_duration: 4
+    audio_sr: 16000
+    n_mfcc: 13
+  
+  # Dataset splits
+  split_ratios:
+    train: 0.8
+    val: 0.1
+    test: 0.1
+
+# Model Configuration
+model:
+  name: "MultiModalTransformer"
+  video_backbone: "resnet50"
+  audio_backbone: "resnet18"
+  fusion_method: "attention"
+  hidden_dim: 512
+  num_classes: 3  # Real, Partial Fake, Full Fake
+  dropout: 0.3
+
+# Paths for outputs
+outputs:
+  log_dir: "/home/kali/deepfake-defender-pro/logs"
+  checkpoint_dir: "/home/kali/deepfake-defender-pro/checkpoints"
+  model_dir: "/home/kali/deepfake-defender-pro/models"
+  results_dir: "/home/kali/deepfake-defender-pro/results"

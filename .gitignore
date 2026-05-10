@@ -1,0 +1,29 @@
+# Large datasets
+data/datasets/
+extracted_zips/
+*.zip
+*.tar
+*.tar.gz
+
+# Certificates private key
+certs/key.pem
+
+# Virtual environments
+venv/
+face_env_clean/
+deepfake_venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+
+# Optional: exclude checkpoints except best_model.pth
+checkpoint_*.pth
+*.pkl
+
+# OS junk
+.DS_Store
+Thumbs.db

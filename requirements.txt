@@ -1,0 +1,39 @@
+# ==================================================
+# DEEPFAKE DEFENDER PRO - CLEAN INSTALL
+# Python 3.11 Compatible Versions
+# ==================================================
+
+# Core ML - Stable versions
+torch==2.5.1
+torchvision==0.20.1
+torchaudio==2.5.1
+
+# Computer Vision
+opencv-python==4.10.0.84
+opencv-contrib-python==4.10.0.84
+pillow==11.0.0
+scikit-image==0.24.0
+
+# Face Recognition (CORRECT VERSION)
+facenet-pytorch==2.6.0
+
+# Audio Processing
+librosa==0.10.2.post1
+soundfile==0.12.1
+audioread==3.0.1
+
+# Scientific Computing
+numpy==1.26.4
+scipy==1.14.1
+
+# Web/API
+fastapi==0.115.5
+uvicorn[standard]==0.30.6
+websockets==13.1
+aiohttp==3.10.10
+
+# Utilities
+python-dotenv==1.0.1
+pyyaml==6.0.2
+tqdm==4.66.5
+joblib==1.4.2

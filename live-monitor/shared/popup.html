@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            width: 360px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: 0;
+        }
+        
+        .container {
+            padding: 20px;
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .logo {
+            font-size: 40px;
+            background: rgba(255,255,255,0.15);
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+        }
+        
+        .title h2 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+        
+        .title p {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .status-card {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .status-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 10px 0;
+        }
+        
+        .status-label {
+            opacity: 0.8;
+            font-size: 13px;
+        }
+        
+        .status-value {
+            font-weight: 600;
+            font-size: 13px;
+        }
+        
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        
+        .dot.green { background: #00ff00; box-shadow: 0 0 10px #00ff00; }
+        .dot.yellow { background: #ffaa00; }
+        .dot.red { background: #ff4444; }
+        
+        .button {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            width: 100%;
+            margin: 8px 0;
+            transition: transform 0.2s;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .button.secondary {
+            background: rgba(255,255,255,0.15);
+            color: white;
+        }
+        
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 11px;
+            opacity: 0.6;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .loader {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🛡️</div>
+            <div class="title">
+                <h2>Deepfake Defender</h2>
+                <p>Real-time meeting protection</p>
+            </div>
+        </div>
+        
+        <div class="status-card">
+            <div class="status-row">
+                <span class="status-label">Kali VM Status:</span>
+                <span class="status-value" id="kali-status">Checking...</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Meeting:</span>
+                <span class="status-value" id="meeting-id">-</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Participant:</span>
+                <span class="status-value" id="participant-name">-</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Extension Status:</span>
+                <span class="status-value" id="extension-status">Active</span>
+            </div>
+        </div>
+        
+        <button class="button" id="refreshBtn">🔄 Refresh Status</button>
+        <button class="button secondary" id="settingsBtn">⚙️ Settings</button>
+        
+        <div class="footer">
+            Kali IP: 192.168.152.128<br>
+            v1.0.0 | Protecting your privacy
+        </div>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>
