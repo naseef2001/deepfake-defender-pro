@@ -2,179 +2,98 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            width: 360px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            width: 280px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            margin: 0;
-        }
-        
-        .container {
             padding: 20px;
         }
-        
         .header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
+            text-align: center;
             margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
         }
-        
-        .logo {
-            font-size: 40px;
-            background: rgba(255,255,255,0.15);
-            width: 60px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 15px;
+        .header h2 {
+            font-size: 20px;
+            margin-bottom: 5px;
         }
-        
-        .title h2 {
-            font-size: 18px;
-            margin-bottom: 4px;
-        }
-        
-        .title p {
+        .header p {
             font-size: 12px;
-            opacity: 0.8;
+            opacity: 0.9;
         }
-        
         .status-card {
             background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
         }
-        
         .status-row {
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            margin: 10px 0;
-        }
-        
-        .status-label {
-            opacity: 0.8;
+            margin: 8px 0;
             font-size: 13px;
         }
-        
-        .status-value {
-            font-weight: 600;
-            font-size: 13px;
+        .ip-address {
+            font-family: monospace;
+            background: rgba(0,0,0,0.3);
+            padding: 4px 8px;
+            border-radius: 4px;
         }
-        
-        .dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 5px;
-        }
-        
-        .dot.green { background: #00ff00; box-shadow: 0 0 10px #00ff00; }
-        .dot.yellow { background: #ffaa00; }
-        .dot.red { background: #ff4444; }
-        
         .button {
             background: white;
             color: #667eea;
             border: none;
-            padding: 12px 20px;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 14px;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
             cursor: pointer;
             width: 100%;
-            margin: 8px 0;
+            font-size: 14px;
             transition: transform 0.2s;
         }
-        
         .button:hover {
-            transform: translateY(-2px);
+            transform: scale(1.02);
         }
-        
-        .button.secondary {
-            background: rgba(255,255,255,0.15);
-            color: white;
-        }
-        
         .footer {
-            margin-top: 20px;
+            margin-top: 15px;
             text-align: center;
+            font-size: 10px;
+            opacity: 0.7;
+        }
+        .secure-badge {
+            color: #00ff00;
             font-size: 11px;
-            opacity: 0.6;
-        }
-        
-        .hidden {
-            display: none;
-        }
-        
-        .loader {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+            margin-top: 5px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">🛡️</div>
-            <div class="title">
-                <h2>Deepfake Defender</h2>
-                <p>Real-time meeting protection</p>
-            </div>
+    <div class="header">
+        <h2>🛡️ Deepfake Defender</h2>
+        <p>Real-time protection for Google Meet</p>
+    </div>
+    
+    <div class="status-card">
+        <div class="status-row">
+            <span>Status:</span>
+            <span id="status">Checking...</span>
         </div>
-        
-        <div class="status-card">
-            <div class="status-row">
-                <span class="status-label">Kali VM Status:</span>
-                <span class="status-value" id="kali-status">Checking...</span>
-            </div>
-            <div class="status-row">
-                <span class="status-label">Meeting:</span>
-                <span class="status-value" id="meeting-id">-</span>
-            </div>
-            <div class="status-row">
-                <span class="status-label">Participant:</span>
-                <span class="status-value" id="participant-name">-</span>
-            </div>
-            <div class="status-row">
-                <span class="status-label">Extension Status:</span>
-                <span class="status-value" id="extension-status">Active</span>
-            </div>
+        <div class="status-row">
+            <span>Kali VM:</span>
+            <span class="ip-address">192.168.152.128</span>
         </div>
-        
-        <button class="button" id="refreshBtn">🔄 Refresh Status</button>
-        <button class="button secondary" id="settingsBtn">⚙️ Settings</button>
-        
-        <div class="footer">
-            Kali IP: 192.168.152.128<br>
-            v1.0.0 | Protecting your privacy
+        <div class="status-row">
+            <span>Security:</span>
+            <span class="secure-badge">🔒 HTTPS/WSS</span>
         </div>
+    </div>
+    
+    <button class="button" id="testBtn">Test Connection</button>
+    
+    <div class="footer">
+        v1.0.0 | Active on Google Meet
     </div>
     
     <script src="popup.js"></script>

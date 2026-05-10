@@ -1,48 +1,52 @@
 // Deepfake Defender - Popup Script
-
 document.addEventListener('DOMContentLoaded', function() {
     updateStatus();
-    
-    document.getElementById('refreshBtn').addEventListener('click', updateStatus);
-    document.getElementById('settingsBtn').addEventListener('click', openSettings);
+    document.getElementById('testBtn').addEventListener('click', testConnection);
 });
 
 async function updateStatus() {
-    const statusEl = document.getElementById('kali-status');
-    const meetingEl = document.getElementById('meeting-id');
-    const participantEl = document.getElementById('participant-name');
-    
-    statusEl.innerHTML = '<span class="loader"></span> Checking...';
+    const statusEl = document.getElementById('status');
+    statusEl.textContent = '⏳ Checking...';
     
     try {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const response = await fetch('https://192.168.152.128:8000/health');
+        const data = await response.json();
         
-        if (!tab.url.includes('meet.google.com')) {
-            statusEl.innerHTML = '❌ Not in Google Meet';
-            meetingEl.textContent = '-';
-            participantEl.textContent = '-';
-            return;
-        }
-        
-        const response = await chrome.tabs.sendMessage(tab.id, { type: 'ping' });
-        
-        if (response && response.status === 'alive') {
-            statusEl.innerHTML = response.kaliConnected ? 
-                '<span class="dot green"></span> Connected' : 
-                '<span class="dot red"></span> Offline';
-            meetingEl.textContent = response.meeting.meetingId;
-            participantEl.textContent = response.meeting.participantName;
+        if (data.status === 'healthy') {
+            statusEl.innerHTML = '✅ Connected';
+            statusEl.style.color = '#00ff00';
         } else {
-            statusEl.innerHTML = '⚠️ No response';
+            statusEl.innerHTML = '⚠️ Unknown';
+            statusEl.style.color = '#ffaa00';
         }
     } catch (error) {
-        console.error('Popup error:', error);
-        statusEl.innerHTML = '❌ Error loading';
-        meetingEl.textContent = '-';
-        participantEl.textContent = '-';
+        statusEl.innerHTML = '❌ Offline';
+        statusEl.style.color = '#ff4444';
     }
 }
 
-function openSettings() {
-    chrome.runtime.openOptionsPage();
+async function testConnection() {
+    const btn = document.getElementById('testBtn');
+    const originalText = btn.textContent;
+    
+    btn.textContent = 'Testing...';
+    btn.disabled = true;
+    
+    try {
+        const response = await fetch('https://192.168.152.128:8000/health');
+        const data = await response.json();
+        
+        if (data.status === 'healthy') {
+            alert(`✅ Connected to Kali VM!\n\nVersion: ${data.version}\nDetectors: ${Object.keys(data.detectors).join(', ')}`);
+            updateStatus();
+        } else {
+            alert('⚠️ Connected but unexpected response');
+        }
+    } catch (error) {
+        alert('❌ Cannot connect to Kali VM\n\nMake sure:\n1. Kali VM is running\n2. Servers are started\n3. HTTPS certificate is accepted');
+        updateStatus();
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
 }

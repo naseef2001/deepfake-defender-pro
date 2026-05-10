@@ -1,208 +1,343 @@
-// Deepfake Defender - Content Script
-console.log('%c🔥 DEEPFAKE DEFENDER: ACTIVATED!', 'background: #ff0000; color: white; font-size: 20px; padding: 10px;');
+// Deepfake Defender - Balanced Thresholds
+console.log('%c🔥 DEEPFAKE DEFENDER LOADED', 'background: #4CAF50; color: white; font-size: 16px; padding: 5px;');
+console.log('🔍 Debug mode ACTIVE');
 
-// Configuration
-const KALI_IP = '192.168.152.128';
-const API_URL = `http://${KALI_IP}:8000`;
-const WS_URL = `ws://${KALI_IP}:8001/ws/meeting`;
+// =========================================================
+// CONFIGURATION - CHANGE THESE IF NEEDED
+// =========================================================
+const KALI_IP = '192.168.152.128';  // Your Kali VM IP
+const USE_SSL = true;                // Set to false if no SSL
+const WS_URL = USE_SSL ? 
+    `wss://${KALI_IP}:8001/ws/meeting` : 
+    `ws://${KALI_IP}:8001/ws/meeting`;
 
-(function() {
-    'use strict';
+console.log('📡 Kali IP:', KALI_IP);
+console.log('🔌 WebSocket URL:', WS_URL);
+
+// =========================================================
+// GLOBAL VARIABLES
+// =========================================================
+let ws = null;
+let participantId = 'user_' + Math.random().toString(36).substr(2, 9);
+let reconnectAttempts = 0;
+let frameInterval = null;
+let isConnected = false;
+
+// =========================================================
+// ADD VISUAL INDICATOR TO PAGE
+// =========================================================
+function addIndicator() {
+    console.log('🏁 Adding indicator to page...');
     
-    console.log('✅ Content script initializing...');
-    console.log('🔧 Kali IP:', KALI_IP);
+    const existing = document.getElementById('dfd-indicator');
+    if (existing) existing.remove();
+    
+    const indicator = document.createElement('div');
+    indicator.id = 'dfd-indicator';
+    indicator.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 50px;
+        z-index: 999999;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        font-weight: bold;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        border: 2px solid white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    `;
 
-    // Add visible indicator to the page
-    function addIndicator() {
-        if (document.getElementById('dfd-indicator')) return;
-        
-        const indicator = document.createElement('div');
-        indicator.id = 'dfd-indicator';
-        indicator.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 50px;
-            z-index: 999999;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-            font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            border: 2px solid white;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        `;
+    indicator.onmouseover = () => indicator.style.transform = 'scale(1.05)';
+    indicator.onmouseout = () => indicator.style.transform = 'scale(1)';
+    indicator.onclick = () => showStatus();
 
-        indicator.onmouseover = () => indicator.style.transform = 'scale(1.05)';
-        indicator.onmouseout = () => indicator.style.transform = 'scale(1)';
-        indicator.onclick = showDetailedStatus;
-        
-        updateIndicatorStatus('connecting');
-        document.body.appendChild(indicator);
-        console.log('✅ Indicator added');
+    indicator.innerHTML = '🛡️ Deepfake Defender <span style="font-size: 10px; margin-left: 5px;">(Connecting...)</span>';
+    document.body.appendChild(indicator);
+    console.log('✅ Indicator added to page');
+}
+
+// =========================================================
+// SHOW DETAILED STATUS
+// =========================================================
+function showStatus() {
+    const status = `🛡️ Deepfake Defender Status:
+    
+🔌 WebSocket: ${ws ? (ws.readyState === 1 ? '✅ Connected' : '❌ Disconnected') : '❌ Not initialized'}
+🆔 Participant ID: ${participantId}
+📡 Kali IP: ${KALI_IP}
+🔒 SSL: ${USE_SSL ? 'Enabled' : 'Disabled'}
+🔄 Reconnect attempts: ${reconnectAttempts}
+📹 Frame capture: ${frameInterval ? '✅ Active' : '❌ Inactive'}`;
+    
+    alert(status);
+}
+
+// =========================================================
+// GET MEETING INFO
+// =========================================================
+function getMeetingId() {
+    const url = window.location.href;
+    const match = url.match(/meet\.google\.com\/([^?#]+)/);
+    return match ? match[1] : 'unknown-meeting';
+}
+
+function getParticipantName() {
+    const nameEl = document.querySelector('[aria-label*="You"]');
+    if (nameEl) {
+        return nameEl.getAttribute('aria-label') || 'User';
     }
+    return 'User';
+}
 
-    function updateIndicatorStatus(status) {
-        const indicator = document.getElementById('dfd-indicator');
-        if (!indicator) return;
-
-        const icons = {
-            connected: '🛡️',
-            connecting: '🔄',
-            error: '⚠️'
-        };
-
-        const colors = {
-            connected: '#00ff00',
-            connecting: '#ffaa00',
-            error: '#ff4444'
-        };
-
-        const texts = {
-            connected: 'Connected to Kali',
-            connecting: 'Connecting...',
-            error: 'Kali Offline'
-        };
-
-        indicator.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 20px;">${icons[status] || '🛡️'}</span>
-                <div>
-                    <div style="font-size: 14px;">Deepfake Defender</div>
-                    <div style="font-size: 11px; opacity: 0.9;">${texts[status] || 'Unknown'}</div>
-                </div>
-                <span style="width: 10px; height: 10px; background: ${colors[status] || '#888'}; border-radius: 50%;"></span>
-            </div>
-        `;
-    }
-
-    function showDetailedStatus() {
-        const statusDiv = document.createElement('div');
-        statusDiv.id = 'dfd-status-popup';
-        statusDiv.style.cssText = `
-            position: fixed;
-            top: 100px;
-            right: 20px;
-            background: rgba(0,0,0,0.95);
-            color: white;
-            padding: 25px;
-            border-radius: 15px;
-            z-index: 1000000;
-            font-family: Arial, sans-serif;
-            min-width: 320px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            border-left: 5px solid #667eea;
-            backdrop-filter: blur(10px);
-        `;
+// =========================================================
+// WEBSOCKET CONNECTION
+// =========================================================
+function connectWebSocket() {
+    console.log('🔌 Attempting WebSocket connection to:', WS_URL);
+    
+    try {
+        ws = new WebSocket(WS_URL);
         
-        statusDiv.innerHTML = `
-            <h3 style="margin:0 0 20px 0; color:#667eea; font-size: 18px;">🛡️ Deepfake Defender Status</h3>
-            <div style="margin:12px 0; display: flex; justify-content: space-between;">
-                <span style="opacity:0.7;">Kali VM IP:</span>
-                <span style="font-family: monospace;">${KALI_IP}</span>
-            </div>
-            <div style="margin:12px 0; display: flex; justify-content: space-between;">
-                <span style="opacity:0.7;">Meeting ID:</span>
-                <span style="font-family: monospace;">${getMeetingInfo().meetingId}</span>
-            </div>
-            <div style="margin:12px 0; display: flex; justify-content: space-between;">
-                <span style="opacity:0.7;">Participant:</span>
-                <span>${getMeetingInfo().participantName}</span>
-            </div>
-            <div style="margin:20px 0; height:1px; background: rgba(255,255,255,0.1);"></div>
-            <div style="margin:12px 0; display: flex; justify-content: space-between;">
-                <span>REST API:</span>
-                <span id="api-status">⏳ Checking...</span>
-            </div>
-            <div style="margin:12px 0; display: flex; justify-content: space-between;">
-                <span>WebSocket:</span>
-                <span id="ws-status">⏳ Checking...</span>
-            </div>
-            <button onclick="this.parentElement.remove()" style="background:#667eea; color:white; border:none; padding:12px 20px; border-radius:8px; width:100%; margin-top:20px; cursor:pointer; font-weight:bold;">Close</button>
-        `;
-        
-        document.body.appendChild(statusDiv);
-        
-        // Check API
-        fetch(`${API_URL}/health`)
-            .then(r => r.json())
-            .then(() => {
-                document.getElementById('api-status').innerHTML = '✅ Online';
-                document.getElementById('api-status').style.color = '#00ff00';
-            })
-            .catch(() => {
-                document.getElementById('api-status').innerHTML = '❌ Offline';
-                document.getElementById('api-status').style.color = '#ff4444';
-            });
+        ws.onopen = () => {
+            console.log('✅ WebSocket CONNECTED successfully!');
+            isConnected = true;
+            reconnectAttempts = 0;
             
-        // Check WebSocket
+            const indicator = document.getElementById('dfd-indicator');
+            if (indicator) {
+                indicator.innerHTML = '🛡️ Deepfake Defender <span style="font-size: 10px; color: #00ff00;">(Connected)</span>';
+            }
+            
+            const joinMsg = {
+                type: 'join',
+                participant_id: participantId,
+                meeting_id: getMeetingId(),
+                name: getParticipantName()
+            };
+            console.log('📤 Sending join message:', joinMsg);
+            ws.send(JSON.stringify(joinMsg));
+        };
+        
+        ws.onmessage = (event) => {
+            console.log('📩 Received:', event.data);
+            try {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'join_confirmed') {
+                    console.log('✅ Join confirmed for meeting:', data.meeting_id);
+                    startFrameCapture();
+                }
+                else if (data.type === 'analysis') {
+                    console.log('📊 Analysis result:', data);
+                    updateIndicatorWithResult(data);
+                }
+                else if (data.type === 'alert') {
+                    console.log('⚠️ ALERT:', data.message);
+                    showAlert(data);
+                }
+                else if (data.type === 'pong') {
+                    console.log('🏓 Pong received');
+                }
+            } catch (e) {
+                console.error('❌ Error parsing message:', e);
+            }
+        };
+        
+        ws.onerror = (error) => {
+            console.error('❌ WebSocket error:', error);
+            isConnected = false;
+            const indicator = document.getElementById('dfd-indicator');
+            if (indicator) {
+                indicator.innerHTML = '🛡️ Deepfake Defender <span style="font-size: 10px; color: #ff4444;">(Error)</span>';
+            }
+        };
+        
+        ws.onclose = (event) => {
+            console.log(`🔌 WebSocket closed (code: ${event.code})`);
+            isConnected = false;
+            reconnectAttempts++;
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+            console.log(`🔄 Reconnecting in ${delay/1000}s... (attempt ${reconnectAttempts})`);
+            setTimeout(connectWebSocket, delay);
+            const indicator = document.getElementById('dfd-indicator');
+            if (indicator) {
+                indicator.innerHTML = '🛡️ Deepfake Defender <span style="font-size: 10px; color: #ffaa00;">(Reconnecting...)</span>';
+            }
+        };
+        
+    } catch (e) {
+        console.error('❌ Failed to create WebSocket:', e);
+    }
+}
+
+// =========================================================
+// FRAME CAPTURE
+// =========================================================
+function startFrameCapture() {
+    console.log('🎥 Starting frame capture...');
+    
+    if (frameInterval) {
+        clearInterval(frameInterval);
+        frameInterval = null;
+    }
+    
+    const videos = document.querySelectorAll('video');
+    console.log('📹 Found', videos.length, 'video elements');
+    
+    if (videos.length === 0) {
+        console.log('❌ No videos found - will retry in 3 seconds');
+        setTimeout(startFrameCapture, 3000);
+        return;
+    }
+    
+    const video = videos[0];
+    console.log('🎥 Using video element:', video);
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    frameInterval = setInterval(() => {
+        if (!isConnected || !ws || ws.readyState !== WebSocket.OPEN) {
+            console.log('⏳ WebSocket not ready, skipping frame');
+            return;
+        }
+        
+        if (video.readyState < 2) {
+            console.log('⏳ Video not ready, skipping frame');
+            return;
+        }
+        
         try {
-            const ws = new WebSocket(WS_URL);
-            ws.onopen = () => {
-                document.getElementById('ws-status').innerHTML = '✅ Online';
-                document.getElementById('ws-status').style.color = '#00ff00';
-                ws.close();
-            };
-            ws.onerror = () => {
-                document.getElementById('ws-status').innerHTML = '❌ Offline';
-                document.getElementById('ws-status').style.color = '#ff4444';
-            };
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64data = reader.result.split(',')[1];
+                    ws.send(JSON.stringify({
+                        type: 'frame',
+                        participant_id: participantId,
+                        data: base64data,
+                        timestamp: Date.now()
+                    }));
+                    console.log('📤 Frame sent', new Date().toLocaleTimeString());
+                };
+                reader.readAsDataURL(blob);
+            }, 'image/jpeg', 0.6);
         } catch (e) {
-            document.getElementById('ws-status').innerHTML = '❌ Offline';
-            document.getElementById('ws-status').style.color = '#ff4444';
+            console.error('❌ Frame capture error:', e);
         }
-    }
+    }, 3000);
+    
+    console.log('✅ Frame capture started');
+}
 
-    function getMeetingInfo() {
-        const url = window.location.href;
-        const meetingId = url.includes('/') ? url.split('/').pop() : 'unknown';
-        let participantName = 'Unknown';
-        const nameElement = document.querySelector('[aria-label*="You"]');
-        if (nameElement) {
-            participantName = nameElement.getAttribute('aria-label') || 'User';
-        }
-        return { meetingId, participantName };
-    }
-
-    async function testKaliConnection() {
-        try {
-            const response = await fetch(`${API_URL}/health`);
-            const data = await response.json();
-            console.log('✅ Connected to Kali:', data);
-            updateIndicatorStatus('connected');
-            return true;
-        } catch (error) {
-            console.error('❌ Kali offline:', error.message);
-            updateIndicatorStatus('error');
-            return false;
-        }
-    }
-
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-        if (request.type === 'ping') {
-            testKaliConnection().then(connected => {
-                sendResponse({ 
-                    status: 'alive', 
-                    meeting: getMeetingInfo(),
-                    kaliConnected: connected
-                });
-            });
-            return true;
-        }
-    });
-
-    async function init() {
-        addIndicator();
-        console.log('📹 Meeting:', getMeetingInfo().meetingId);
-        await testKaliConnection();
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+// =========================================================
+// UPDATE INDICATOR WITH RESULTS (BALANCED THRESHOLDS)
+// =========================================================
+function updateIndicatorWithResult(data) {
+    const indicator = document.getElementById('dfd-indicator');
+    if (!indicator) return;
+    
+    const confidence = data.confidence || 0.5;
+    const isFake = data.is_deepfake || false;
+    
+    let color = '#00ff00';
+    let text = 'REAL';
+    let emoji = '🛡️';
+    
+    // BALANCED THRESHOLDS:
+    // - RED: if server says deepfake (confidence > 0.75) OR confidence > 0.8
+    // - YELLOW: if confidence > 0.6 but not deepfake (suspicious)
+    // - GREEN: confidence <= 0.6
+    if (isFake || confidence > 0.8) {
+        color = '#ff0000';
+        text = 'DEEPFAKE';
+        emoji = '⚠️';
+    } else if (confidence > 0.75) {
+        color = '#ffaa00';
+        text = 'SUSPICIOUS';
+        emoji = '⚠️';
+    } else if (confidence > 0.73) {
+        color = '#667eea';
+        text = 'ANALYZING';
+        emoji = '🛡️';
     } else {
-        init();
+        color = '#00ff00';
+        text = 'REAL';
+        emoji = '🛡️';
     }
-})();
+    
+    indicator.style.background = `linear-gradient(135deg, #667eea 0%, ${color} 100%)`;
+    indicator.innerHTML = `${emoji} Deepfake Defender <span style="font-size: 10px; margin-left: 5px;">${text} (${(confidence*100).toFixed(0)}%)</span>`;
+}
+
+// =========================================================
+// SHOW ALERT
+// =========================================================
+function showAlert(data) {
+    const alertDiv = document.createElement('div');
+    alertDiv.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255, 0, 0, 0.9);
+        color: white;
+        padding: 20px 30px;
+        border-radius: 10px;
+        z-index: 1000000;
+        font-family: Arial;
+        font-size: 18px;
+        font-weight: bold;
+        box-shadow: 0 0 30px rgba(255,0,0,0.5);
+        border: 2px solid white;
+    `;
+    alertDiv.innerHTML = `
+        ⚠️ DEEPFAKE ALERT!<br>
+        Confidence: ${(data.confidence*100).toFixed(0)}%<br>
+        <button onclick="this.parentElement.remove()" style="margin-top:10px; padding:5px 15px;">OK</button>
+    `;
+    document.body.appendChild(alertDiv);
+    setTimeout(() => alertDiv.remove(), 5000);
+}
+
+// =========================================================
+// INITIALIZATION
+// =========================================================
+function initialize() {
+    console.log('🚀 Initializing Deepfake Defender...');
+    addIndicator();
+    setTimeout(() => {
+        connectWebSocket();
+        const videos = document.querySelectorAll('video');
+        if (videos.length > 0) {
+            console.log('📹 Videos already present, will start capture after connection');
+        }
+    }, 2000);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+} else {
+    initialize();
+}
+
+// Make variables available for debugging
+window.dfdWs = ws;
+window.dfdParticipantId = participantId;
+window.dfdTestConnection = function() {
+    console.log('Testing connection...');
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({type: 'ping'}));
+        console.log('✅ Ping sent');
+    } else {
+        console.log('❌ WebSocket not connected');
+    }
+};
